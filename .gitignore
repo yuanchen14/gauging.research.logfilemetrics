@@ -1,0 +1,14 @@
+*__pycache__*
+*.tox/
+*.egg-info/
+.idea/
+dist/
+build/
+/fugro.rail.oneportal/JUnittest.xml
+/src/JiraTimesheet/settings.py
+.eggs/
+JUnittest.xml
+.cache/
+.local/
+.bash_history
+runtest_tmp.sh
