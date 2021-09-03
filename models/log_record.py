@@ -4,3 +4,5 @@ class LogRecord:
         self.time = time
         self.user_name = user_name
         self.message = message
+
+

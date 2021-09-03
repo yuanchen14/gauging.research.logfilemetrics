@@ -70,7 +70,9 @@ def indexer(directory, json_file):
 @click.command()
 @click.option('--path-to-metadata', required=True, help="the path to metadata contain the log file",
               type=click.Path(exists=True, file_okay=True, dir_okay=False))
-def parse_log(path_to_metadata):
+@click.option('--json-file', required=True, help="the path to enriched json file",
+              type=click.Path(file_okay=True, dir_okay=False))
+def parse_log(path_to_metadata, json_file):
     with open(path_to_metadata, 'r') as file:
         metadata = json.load(file)
         # retrieve the full path to log from the metadata
@@ -78,10 +80,22 @@ def parse_log(path_to_metadata):
             path_to_log = data["full_path"]
             log_records = read_log_per_profile(path_to_log)
 
-            start_time = [record.time for record in log_records if (record.message == "Profile opened")]
-            end_time = [record.time for record in log_records if (record.message == "Profile closed")]
-
-        return start_time, end_time
+            start_time = sorted([record.time for record in log_records if (record.message == "Profile opened")])
+            end_time = sorted([record.time for record in log_records if (record.message == "Profile closed")])
+            # for the end time, there might two closed actions w.r.t one opened action should select one of them
+            if len(start_time) != len(end_time):
+                count = 0
+                while count < len(end_time):
+                    if (end_time[count + 1] - end_time[count]).total_seconds() <= 1:
+                        end_time.pop(count)
+                        count += 1
+                total_duration = sum([(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time)])
+            else:
+                total_duration = sum([(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time)])
+            data["duration(hrs)"] = total_duration
+        json_structure = {"data": []}
+        json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
+        json_writer.write_objects(metadata["data"])
 
 
 if __name__ == '__main__':
