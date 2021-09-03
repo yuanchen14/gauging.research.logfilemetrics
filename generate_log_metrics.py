@@ -12,13 +12,8 @@ from datetime import datetime
 
 from fugro.rail.chainage.records.writers import JsonModelFileWritingManager
 
-
-class LogRecord:
-
-    def __init__(self, time, user_name, message):
-        self.time = time
-        self.user_name = user_name
-        self.message = message
+from models.log_metadata import LogMetaData
+from models.log_record import LogRecord
 
 
 def read_log_per_profile(path_to_log: str):
@@ -26,37 +21,20 @@ def read_log_per_profile(path_to_log: str):
         all_lines = f.readlines()
         log_record = []
         for line in all_lines:
-            time_name = re.findall(r"\[(.*?)]", line.strip('\n'))
-            if len(time_name) != 2:
+            first_two_columns = re.findall(r"\[(.*?)\]", line.strip('\n'))
+            message = re.search(r"(?:^|])(?!\.)([\w\s]+)", line.strip('\n')).group(1).lstrip()
+            if len(first_two_columns) != 2:
                 logging.error(
                     f"The format of log file {0} is supposed to have time and name column within square bracket..." % os.path.basename(
                         path_to_log))
-            log_record.append(LogRecord(time_name[0], time_name[1], 's'))
+            log_record.append(
+                LogRecord(dt.datetime.strptime(first_two_columns[0], "%m/%d/%Y %H:%M:%S"), first_two_columns[1],
+                          message))
+        return log_record
 
 
 def generate_metrics_per_profile(path_to_profiles: str):
     logging.info(f"Start generating the metrics for ")
-
-
-class LogMetaData:
-
-    def __init__(self, full_path, object_name, object_type, elr, track_id, profile_identifier):
-        self.full_path = full_path
-        self.object_name = object_name
-        self.object_type = object_type
-        self.track_id = track_id
-        self.elr = elr
-        self.profile_identifier = profile_identifier
-
-    def to_record(self) -> Dict[str, str]:
-        return {
-            "profile_identifier": self.profile_identifier,
-            "full_path": self.full_path,
-            "object_name": self.object_name,
-            "object_type": self.object_type,
-            "elr": self.elr,
-            "track_id": self.track_id
-        }
 
 
 @click.command()
@@ -71,10 +49,10 @@ def indexer(directory, json_file):
         log_metadata = {}
         root_elements = Path(root).parts
         if len(files) != 0:
-            object_name = root_elements[-1]     # object name
-            object_type = root_elements[-2]     # object type
-            track_id = root_elements[-3]        # track id
-            elr = root_elements[-4]             # elr
+            object_name = root_elements[-1]  # object name
+            object_type = root_elements[-2]  # object type
+            track_id = root_elements[-3]  # track id
+            elr = root_elements[-4]  # elr
             sc0_matchings = [file for file in files if '.sc0' in file.lower()]
             log_matchings = [file for file in files if '_log.txt' in file.lower()]
             if len(sc0_matchings) == len(log_matchings) != 0:
@@ -89,8 +67,26 @@ def indexer(directory, json_file):
     json_writer.close()
 
 
+@click.command()
+@click.option('--path-to-metadata', required=True, help="the path to metadata contain the log file",
+              type=click.Path(exists=True, file_okay=True, dir_okay=False))
+def parse_log(path_to_metadata):
+    with open(path_to_metadata, 'r') as file:
+        metadata = json.load(file)
+        # retrieve the full path to log from the metadata
+        for data in metadata["data"]:
+            path_to_log = data["full_path"]
+            log_records = read_log_per_profile(path_to_log)
+
+            start_time = [record.time for record in log_records if (record.message == "Profile opened")]
+            end_time = [record.time for record in log_records if (record.message == "Profile closed")]
+
+        return start_time, end_time
+
+
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-    indexer()
+    # indexer()
+    parse_log()
     # read_log_per_profile(r"D:\Test\r251\Ableton Lane Tunnel Bridge No.1050Q 10 Miles 50 Chains\01050JBM_log.txt")
     # generate_metrics_per_profile()
