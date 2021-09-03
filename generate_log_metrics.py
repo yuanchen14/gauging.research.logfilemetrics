@@ -1,14 +1,10 @@
 import click
 import json
 import logging
-import io
 import re
 import os
-from typing import Dict
 from pathlib import Path
-import glob
 import datetime as dt
-from datetime import datetime
 
 from fugro.rail.chainage.records.writers import JsonModelFileWritingManager
 
@@ -76,18 +72,21 @@ def parse_log(path_to_metadata, json_file):
     with open(path_to_metadata, 'r') as file:
         metadata = json.load(file)
         # retrieve the full path to log from the metadata
+        logging.info("Calculate the duration for all profiles in one specific object...")
         for data in metadata["data"]:
             path_to_log = data["full_path"]
             log_records = read_log_per_profile(path_to_log)
 
             start_time = sorted([record.time for record in log_records if (record.message == "Profile opened")])
             end_time = sorted([record.time for record in log_records if (record.message == "Profile closed")])
-            # for the end time, there might two closed actions w.r.t one opened action should select one of them
+            # for the end time, there might be two closed actions w.r.t one opened action should select one of them
             if len(start_time) != len(end_time):
                 count = 0
-                while count < len(end_time):
+                while count < len(end_time) - 1:
                     if (end_time[count + 1] - end_time[count]).total_seconds() <= 1:
                         end_time.pop(count)
+                        count += 1
+                    else:
                         count += 1
                 total_duration = sum([(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time)])
             else:
@@ -96,6 +95,7 @@ def parse_log(path_to_metadata, json_file):
         json_structure = {"data": []}
         json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
         json_writer.write_objects(metadata["data"])
+        logging.info("Done")
 
 
 if __name__ == '__main__':
