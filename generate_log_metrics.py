@@ -5,6 +5,7 @@ import io
 import re
 import os
 from typing import Dict
+from pathlib import Path
 import glob
 import datetime as dt
 from datetime import datetime
@@ -39,16 +40,22 @@ def generate_metrics_per_profile(path_to_profiles: str):
 
 class LogMetaData:
 
-    def __init__(self, full_path, profile, object_type):
+    def __init__(self, full_path, object_name, object_type, elr, track_id, profile_identifier):
         self.full_path = full_path
-        self.profile = profile
+        self.object_name = object_name
         self.object_type = object_type
+        self.track_id = track_id
+        self.elr = elr
+        self.profile_identifier = profile_identifier
 
     def to_record(self) -> Dict[str, str]:
         return {
+            "profile_identifier": self.profile_identifier,
             "full_path": self.full_path,
-            "profile": self.profile,
+            "object_name": self.object_name,
             "object_type": self.object_type,
+            "elr": self.elr,
+            "track_id": self.track_id
         }
 
 
@@ -62,21 +69,23 @@ def indexer(directory, json_file):
     json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
     for root, _, files in os.walk(directory, topdown=False):
         log_metadata = {}
+        root_elements = Path(root).parts
         if len(files) != 0:
-            sc0_matching = [file for file in files if '.sc0' in file.lower()]
-            log_matching = [file for file in files if '_log.txt' in file.lower()]
-            if len(sc0_matching) == len(log_matching) != 0:
+            object_name = root_elements[-1]     # object name
+            object_type = root_elements[-2]     # object type
+            track_id = root_elements[-3]        # track id
+            elr = root_elements[-4]             # elr
+            sc0_matchings = [file for file in files if '.sc0' in file.lower()]
+            log_matchings = [file for file in files if '_log.txt' in file.lower()]
+            if len(sc0_matchings) == len(log_matchings) != 0:
                 log_metadata["data"] = []
-                for m in log_matching:
-                    full_path = os.path.join(root, m)
-                    path_to_profile = os.path.split(root)[1]
-                    path_to_object = os.path.split(os.path.split(root)[0])[1]
-                    metadata = LogMetaData(full_path, path_to_profile, path_to_object)
+                for log_match, sc0_match in zip(log_matchings, sc0_matchings):
+                    full_log_path = os.path.join(root, log_match)
+                    profile_identifier = Path(os.path.join(root, sc0_match)).stem
+                    metadata = LogMetaData(full_log_path, object_name, object_type, elr, track_id, profile_identifier)
                     log_metadata["data"].append(metadata.to_record())
                 json_writer.write_objects(log_metadata["data"])
-        else:
-            continue
-    logging.info("Finish generating the indices for the given directory...")
+    logging.info(f"Finish generating the indices for the given directory {directory}...")
     json_writer.close()
 
 
