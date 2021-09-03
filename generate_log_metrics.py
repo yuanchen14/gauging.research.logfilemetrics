@@ -5,6 +5,7 @@ import re
 import os
 from pathlib import Path
 import datetime as dt
+import pandas as pd
 
 from fugro.rail.chainage.records.writers import JsonModelFileWritingManager
 
@@ -29,7 +30,7 @@ def read_log_per_profile(path_to_log: str):
         return log_record
 
 
-def generate_metrics_per_profile(path_to_profiles: str):
+def generate_metrics_per_object(path_to_profiles: str):
     logging.info(f"Start generating the metrics for ")
 
 
@@ -95,12 +96,27 @@ def parse_log(path_to_metadata, json_file):
         json_structure = {"data": []}
         json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
         json_writer.write_objects(metadata["data"])
+        json_writer.close()
         logging.info("Done")
+
+
+@click.command()
+@click.option('--path-to-metadata', required=True, help="the path to metadata contain the log file",
+              type=click.Path(exists=True, file_okay=True, dir_okay=False))
+@click.option('--csv-file', required=True, help="the path to csv file",
+              type=click.Path(file_okay=True, dir_okay=False))
+def generate_report(path_to_metadata, csv_file):
+    with open(path_to_metadata, 'r') as file:
+        metadata = json.load(file)
+        metrics = pd.DataFrame(metadata['data'])
+        object_based_metrics = metrics.groupby('object_type', as_index=False).sum()
+        object_based_metrics.to_csv(csv_file, index=False, sep=',', encoding='utf-8')
 
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
     # indexer()
-    parse_log()
+    # parse_log()
+    generate_report()
     # read_log_per_profile(r"D:\Test\r251\Ableton Lane Tunnel Bridge No.1050Q 10 Miles 50 Chains\01050JBM_log.txt")
     # generate_metrics_per_profile()
