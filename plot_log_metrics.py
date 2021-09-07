@@ -26,10 +26,12 @@ def plot_object_based_evaluation(log_each_object: str, specific_object, user_inf
     ax.bar(x, user_profiles["duration(hrs)"], width=0.2, color='b', align='center', label='duration hours')
     ax2 = ax.twinx()
     ax2.bar(x+0.2, user_profiles["total_profiles_per_user"], width=0.2, color='g', align='center', label='profile number')
+    ax.set_xticks(x)
     ax.set_xticklabels(user_profiles["user_name"])
     ax.set_ylabel("hours")
     ax2.set_ylabel("profile number")
     ax.legend()
+    ax2.legend(loc='upper right')
 
     plt.figure(2)
     plt.subplot(111)

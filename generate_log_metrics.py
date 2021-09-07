@@ -109,10 +109,10 @@ def calculate_duration_time(log_records):
             else:
                 count += 1
         total_duration = sum(
-            [(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time) if (e - s).total_seconds() < 7200])
+            [(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time) if 7200 > (e - s).total_seconds() > 0])
     else:
         total_duration = sum(
-            [(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time) if (e - s).total_seconds() < 7200])
+            [(e - s).total_seconds() / 3600 for e, s in zip(end_time, start_time) if 7200 > (e - s).total_seconds() > 0])
     return total_duration
 
 
@@ -141,7 +141,7 @@ def generate_report(path_to_metadata, csv_file_object, csv_file_profile, csv_fil
         project_level["percentage_short_objects"] = 100 - project_level["percentage_long_objects"]
         project_level["total_durations"] = sum(metrics["duration(hrs)"])
         project_level["total_profiles"] = len(metrics["profile_identifier"])
-        object_profile_based_metrics = metrics[metrics['object_type'] == 'Tunnel'].groupby('profile_identifier',
+        object_profile_based_metrics = metrics[metrics['object_type'] == 'Wall'].groupby('profile_identifier',
                                                                                          as_index=False).sum()
         object_based_metrics = metrics.groupby('object_type', as_index=False).sum()
         user_name_based_metric = metrics.groupby('user_name', as_index=False).sum()
@@ -160,5 +160,5 @@ if __name__ == '__main__':
     # indexer()
     # parse_log()
     generate_report()
-    # calculate_duration_time(r"D:\Test\r251\Ableton Lane Tunnel Bridge No.1050Q 10 Miles 50 Chains\01050OBM_log.txt")
+    # calculate_duration_time(r"R:\02 Projects\2019\9219-0021-000_Western Region\B_Sites\TOR_214_222\04_Structure_Gauging\01_Processing\02_From_FALB\2021-05-11\TOR_214_222\Sc0\TOR\1100\Wall\Railing 221 Miles 55 Chains _2\22155MBM_log.txt")
     # generate_metrics_per_profile()
