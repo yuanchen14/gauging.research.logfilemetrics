@@ -78,85 +78,47 @@ def generate_session_information(log_records, data):
             session_records = [record for record in log_records if
                                s["start_session_time"] <= record.time <= s["end_session_time"]]
             if len(session_records) > 3:
-                session_info.append({
-                    "user_name": session_records[0].user_name,
-                    "session_duration(second)": (session_records[-1].time - session_records[0].time).total_seconds(),
-                    "is_edit_session": True,
-                    "start_session_time": session_records[0].time.strftime('%Y%m%dT%H%M%S'),
-                    "end_session_time": session_records[-1].time.strftime('%Y%m%dT%H%M%S'),
-                    "edit_duration(second)": (session_records[-2].time - session_records[1].time).total_seconds(),
-                    "events": []
-                })
+                session_info.append(
+                    LogRecord.to_session(session_records[0].user_name, True, session_records[0].time,
+                                         session_records[-1].time, session_records[1].time, session_records[-2].time))
             elif len(session_records) == 3:
-                session_info.append({
-                    "user_name": session_records[0].user_name,
-                    "session_duration(second)": (session_records[-1].time - session_records[0].time).total_seconds(),
-                    "is_edit_session": True,
-                    "start_session_time": session_records[0].time.strftime('%Y%m%dT%H%M%S'),
-                    "end_session_time": session_records[-1].time.strftime('%Y%m%dT%H%M%S'),
-                    "edit_duration(second)": (session_records[-1].time - session_records[0].time).total_seconds(),
-                    "events": []
-                })
+                # suppose a single action session takes 2 seconds to finish editing
+                session_info.append(
+                    LogRecord.to_session(session_records[0].user_name, True, session_records[0].time,
+                                         session_records[-1].time, session_records[1].time,
+                                         session_records[1].time + timedelta(seconds=2)))
             else:
-                session_info.append({
-                    "user_name": session_records[0].user_name,
-                    "session_duration(second)": (session_records[-1].time - session_records[0].time).total_seconds(),
-                    "is_edit_session": False,
-                    "start_session_time": session_records[0].time.strftime('%Y%m%dT%H%M%S'),
-                    "end_session_time": session_records[-1].time.strftime('%Y%m%dT%H%M%S'),
-                    "edit_duration(second)": 0.0,
-                    "events": []
-                })
+                # session without editing
+                session_info.append(
+                    LogRecord.to_session(session_records[0].user_name, False, session_records[0].time,
+                                         session_records[-1].time, session_records[0].time, session_records[0].time))
             for session_record in session_records:
-                session_info[session_count]["events"].append({
-                    "timestamp": session_record.time.strftime('%Y%m%dT%H%M%S'),
-                    "event_message": session_record.message
-                })
+                session_info[session_count]["events"].append(
+                    LogRecord.to_single_event(session_record.time, session_record.message))
         elif s["end_session_time"] != 0 and not s["has_close_action"]:
             session_records = [record for record in log_records if
                                s["start_session_time"] <= record.time < s["end_session_time"]]
             if len(session_records) == 1:
-                session_info.append({
-                    "user_name": session_records[0].user_name,
-                    "session_duration(second)": 0.0,
-                    "is_edit_session": False,
-                    "start_session_time": session_records[0].time.strftime('%Y%m%dT%H%M%S'),
-                    "end_session_time": 0.0,
-                    "edit_duration(second)": 0.0,
-                    "events": []
-                })
+                session_info.append(LogRecord.to_session(session_records[0].user_name, False, session_records[0].time,
+                                                         session_records[0].time, session_records[0].time, session_records[0].time))
             else:
-                session_info.append({
-                    "user_name": session_records[0].user_name,
-                    "session_duration(second)": (session_records[-1].time - session_records[0].time).total_seconds(),
-                    "is_edit_session": True,
-                    "start_session_time": session_records[0].time.strftime('%Y%m%dT%H%M%S'),
-                    "end_session_time": session_records[-1].time.strftime('%Y%m%dT%H%M%S'),
-                    "edit_duration(second)": (session_records[-1].time - session_records[1].time).total_seconds(),
-                    "events": []
-                })
+                session_info.append(LogRecord.to_session(session_records[0].user_name, True, session_records[0].time,
+                                                         session_records[-1].time, session_records[1].time, session_records[-1].time))
 
             for session_record in session_records:
-                session_info[session_count]["events"].append({
-                    "timestamp": session_record.time.strftime('%Y%m%dT%H%M%S'),
-                    "event_message": session_record.message
-                })
+                session_info[session_count]["events"].append(
+                    LogRecord.to_single_event(session_record.time, session_record.message))
         else:
             session_records = [record for record in log_records if s["start_session_time"] <= record.time]
-            session_info.append({
-                "user_name": session_records[0].user_name,
-                "session_duration(second)": (session_records[-1].time - session_records[0].time).total_seconds(),
-                "is_edit_session": len(session_records) > 2,
-                "start_session_time": session_records[0].time.strftime('%Y%m%dT%H%M%S'),
-                "end_session_time": session_records[-1].time.strftime('%Y%m%dT%H%M%S'),
-                "edit_duration(second)": (session_records[-1].time - session_records[1].time).total_seconds(),
-                "events": []
-            })
+            if len(session_records) == 1:
+                session_info.append(LogRecord.to_session(session_records[0].user_name, False, session_records[0].time,
+                                                         session_records[0].time, session_records[0].time, session_records[0].time))
+            else:
+                session_info.append(LogRecord.to_session(session_records[0].user_name, True, session_records[0].time,
+                                                         session_records[-1].time, session_records[1].time, session_records[-1].time))
             for session_record in session_records:
-                session_info[session_count]["events"].append({
-                    "timestamp": session_record.time.strftime('%Y%m%dT%H%M%S'),
-                    "event_message": session_record.message
-                })
+                session_info[session_count]["events"].append(
+                    LogRecord.to_single_event(session_record.time, session_record.message))
         session_count += 1
         data["total_session_duration(second)"] = sum([r["session_duration(second)"] for r in session_info])
         data["total_edit_duration(second)"] = sum([r["edit_duration(second)"] for r in session_info])
@@ -175,10 +137,9 @@ def parse_log(path_to_metadata, json_file):
         for data in metadata["data"]:
             path_to_log = data["full_path"]
             log_records = read_log_per_profile(path_to_log)
-            try:
-                generate_session_information(log_records, data)
-            except:
-                t = 1
+
+            generate_session_information(log_records, data)
+
         json_structure = {"data": []}
         json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
         json_writer.write_objects(metadata["data"])
@@ -196,28 +157,38 @@ def calculate_duration_time(log_records):
         # Reason: open a new directory and close the profile will result in two
         # close actions
         if (end_time[count + 1] - end_time[count]).total_seconds() <= 3:
+            for r in log_records:
+                if r.time == end_time[count]:
+                    log_records.remove(r)
+                    break
             end_time.pop(count)
             count += 1
         else:
             count += 1
-    # one open action doesn't have close action
-    # if can't find the close action time after 10mins of open action time, this start time
-    # doesn't have end time
-    time_count = 0
-
-    for time in start_time:
-        after_start_time = time + timedelta(minutes=20)
-        if len(end_time) != 0:
-            time_between = [e for e in end_time if time < e < after_start_time]
-            if len(time_between) == 0 and time_count < len(start_time) - 1:
-                session_start_end.append({"start_session_time": time, "end_session_time": start_time[time_count + 1],
-                                          "has_close_action": False})
+    if len(start_time) == len(end_time):
+        for s, e in zip(start_time, end_time):
+            session_start_end.append({"start_session_time": s, "end_session_time": e, "has_close_action": True})
+    else:
+        time_count = 0
+        for time in start_time:
+            # one open action doesn't have close action
+            # if can't find the close action time after 20mins of open action time, this start time
+            # doesn't have end time
+            after_start_time = time + timedelta(minutes=20)
+            if len(end_time) !=0:
+                time_between = [e for e in end_time if time < e < after_start_time]
+                if len(time_between) == 0 and time_count < len(start_time) - 1:
+                    session_start_end.append({"start_session_time": time, "end_session_time": start_time[time_count + 1],
+                                              "has_close_action": False})
+                elif len(time_between) == 0 and len(end_time) < len(start_time):
+                    session_start_end.append({"start_session_time": time, "end_session_time": 0, "has_close_action": False})
+                else:
+                    session_start_end.append(
+                        {"start_session_time": time, "end_session_time": sorted(time_between)[0], "has_close_action": True})
             else:
                 session_start_end.append(
-                    {"start_session_time": time, "end_session_time": sorted(time_between)[0], "has_close_action": True})
-        else:
-            session_start_end.append({"start_session_time": time, "end_session_time": 0, "has_close_action": False})
-        time_count += 1
+                    {"start_session_time": time, "end_session_time": 0, "has_close_action": False})
+            time_count += 1
 
     return session_start_end
 
@@ -248,7 +219,7 @@ def generate_report(path_to_metadata, csv_file_object, csv_file_profile, csv_fil
         project_level["total_session_durations"] = sum(metrics["total_session_duration(second)"])
         project_level["total_edit_duration"] = len(metrics["total_edit_duration(second)"])
         object_profile_based_metrics = metrics[metrics['object_type'] == 'Tunnel'].groupby('profile_identifier',
-                                                                                         as_index=False).sum()
+                                                                                           as_index=False).sum()
         object_based_metrics = metrics.groupby('object_type', as_index=False).sum()
 
         object_based_metrics.to_csv(csv_file_object, index=False, sep=',', encoding='utf-8')
@@ -260,7 +231,7 @@ def generate_report(path_to_metadata, csv_file_object, csv_file_profile, csv_fil
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
     # indexer()
-    # parse_log()
-    generate_report()
-    # calculate_duration_time(r"R:\02 Projects\2019\9219-0021-000_Western Region\B_Sites\TOR_214_222\04_Structure_Gauging\01_Processing\02_From_FALB\2021-05-11\TOR_214_222\Sc0\TOR\1100\Wall\Railing 221 Miles 55 Chains _2\22155MBM_log.txt")
+    parse_log()
+    # generate_report()
+    # calculate_duration_time(r"R:\02 Projects\2019\9219-0021-000_Western Region\B_Sites\TOR_214_222\04_Structure_Gauging\01_Processing\02_From_FALB\2021-05-11\TOR_214_222\Sc0\TOR\1100\S&T\S&T Equipment 219 Miles 63 Chains\21963QBM_log.txt")
     # generate_metrics_per_profile()
