@@ -18,7 +18,12 @@ class LogMetaData:
             "object_name": self.object_name,
             "object_type": self.object_type,
             "elr": self.elr,
-            "track_id": self.track_id
+            "track_id": self.track_id,
+            "total_session_duration(second)": 0.0,
+            "total_edit_duration(second)": 0.0,
+            "sessions": [
+
+            ]
         }
 
 
@@ -30,5 +35,16 @@ class LogMetaDataWithDuration(LogMetaData):
 
     def to_record(self) -> Dict[str, str]:
         dictionary_base = super().to_record()
-        dictionary_base["duration(hrs)"] = self.duration
+
+        dictionary_base["sessions"].append({
+            "user_name": ' ',
+            "session_duration(s)": 0.0,
+            "is_edit_session": True,
+            "start_time": ' ',
+            "end_time": ' ',
+            "edit_duration(second)": ' ',
+            "events": [
+
+            ]
+        })
         return dictionary_base
