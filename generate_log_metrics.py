@@ -200,10 +200,8 @@ def calculate_duration_time(log_records):
               type=click.Path(file_okay=True, dir_okay=False))
 @click.option('--csv-file-profile', required=True, help="the path to profile based csv file",
               type=click.Path(file_okay=True, dir_okay=False))
-@click.option('--csv-file-user', required=True, help="the path to user name based csv file",
-              type=click.Path(file_okay=True, dir_okay=False))
 @click.option('--project-information', help="project level information from the given directory information", type=str)
-def generate_report(path_to_metadata, csv_file_object, csv_file_profile, csv_file_user, project_information):
+def generate_report(path_to_metadata, csv_file_object, csv_file_profile, project_information):
     logging.info("Start generating the csv file metrics using metadata json file...")
     with open(path_to_metadata, 'r') as file:
         metadata = json.load(file)
@@ -218,7 +216,7 @@ def generate_report(path_to_metadata, csv_file_object, csv_file_profile, csv_fil
         project_level["percentage_short_objects"] = 100 - project_level["percentage_long_objects"]
         project_level["total_session_durations"] = sum(metrics["total_session_duration(second)"])
         project_level["total_edit_duration"] = len(metrics["total_edit_duration(second)"])
-        object_profile_based_metrics = metrics[metrics['object_type'] == 'Tunnel'].groupby('profile_identifier',
+        object_profile_based_metrics = metrics[metrics['object_type'] == 'Lineside Furniture'].groupby('profile_identifier',
                                                                                            as_index=False).sum()
         object_based_metrics = metrics.groupby('object_type', as_index=False).sum()
 
