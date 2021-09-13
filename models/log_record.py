@@ -9,7 +9,7 @@ open_profile_pattern = re.compile(r"(?P<open>profile opened)|(?: in gauging edit
 change_attribute_pattern = re.compile(
     r"(?P<undo>UNDO |)(?:changed attribute )(?P<from_attr>\S+)(?: to )(?P<to_attr>\S+)", re.IGNORECASE)
 change_offset_pattern = re.compile(r"(?P<undo>UNDO |)(?:changed offset to )(?P<offset>.*)", re.IGNORECASE)
-move_points_pattern = re.compile(r"(?P<undo>UNDO |)(?:moved )(?P<number>\d+)(?: point\(s\))", re.IGNORECASE)
+move_points_pattern = re.compile(r"(?P<undo>UNDO |)(?:moved )(?P<number>\d+)(?: point\(s\)| point)", re.IGNORECASE)
 paste_pattern = re.compile(r"(?P<undo>UNDO |)(?:pasted points from profile )(?P<profile_name>.*)", re.IGNORECASE)
 paste_drape_pattern = re.compile(r"(?P<undo>UNDO |)(?:pasted and draped points from profile )(?P<profile_name>.*)",
                                  re.IGNORECASE)
@@ -17,8 +17,8 @@ connect_lines_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>connected two li
 interpolate_all_points_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>interpolated all points)", re.IGNORECASE)
 interpolate_points_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>interpolated points)", re.IGNORECASE)
 add_point_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>added new point)", re.IGNORECASE)
-merge_lines_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>merge two lines)", re.IGNORECASE)
-swap_points_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>swap two points)", re.IGNORECASE)
+merge_lines_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>merged two lines)", re.IGNORECASE)
+swap_points_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>swapped two points)", re.IGNORECASE)
 drape_points_pattern = re.compile(r"(?P<undo>UNDO |)(?P<action>draped points)", re.IGNORECASE)
 close_profile_pattern = re.compile(r"(?P<action>profile closed)", re.IGNORECASE)
 
@@ -49,7 +49,7 @@ class LogRecord:
         event_dictionary = {"timestamp": event_time.strftime('%Y%m%dT%H%M%S'), "event_message": event_message}
         change_object_type_match = change_object_type_pattern.match(event_message)
         delete_points_match = delete_points_pattern.match(event_message)
-        open_profile_match = open_profile_pattern.match(event_message)
+        open_profile_match = open_profile_pattern.findall(event_message)
         change_attribute_match = change_attribute_pattern.match(event_message)
         change_offset_match = change_offset_pattern.match(event_message)
         move_points_match = move_points_pattern.match(event_message)
@@ -66,38 +66,80 @@ class LogRecord:
         if interpolate_all_points_match:
             if interpolate_all_points_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoInterpolatePointsProfile.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.InterpolatePointsProfile.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif add_point_match:
             if add_point_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoAddPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.AddPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif connect_lines_match:
             if connect_lines_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoConnectLinesPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.ConnectLinesPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif interpolate_points_match:
             if interpolate_points_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoInterpolatePointsPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.InterpolatePointsPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif merge_lines_match:
             if merge_lines_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoMergeLinesPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.MergeLinesPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif swap_points_match:
             if swap_points_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoSwapTwoPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.SwapTwoPoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif drape_points_match:
             if drape_points_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoDrapePoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": True})
             else:
                 event_dictionary["event_type"] = EventType.DrapePoint.value
+                event_dictionary["extra_info"] = []
+                event_dictionary["extra_info"].append(
+                    {"is_undo": False})
         elif close_profile_match:
             event_dictionary["event_type"] = EventType.CloseProfile.value
         elif change_object_type_match:
@@ -124,10 +166,10 @@ class LogRecord:
                     {"number_of_points": int(delete_points_match.group("number")), "is_undo": False})
         elif open_profile_match:
             event_dictionary["event_type"] = EventType.OpenProfile.value
-            if open_profile_match.group("version_number"):
+            if len(open_profile_match) == 2:
                 event_dictionary["extra_info"] = []
                 event_dictionary["extra_info"].append(
-                    {"gauging_editor_version": open_profile_match.group("version_number")})
+                    {"gauging_editor_version": open_profile_match[1][1]})
         elif change_attribute_match:
             if change_attribute_match.group("undo"):
                 event_dictionary["event_type"] = EventType.UndoChangeAttributeProfile.value
@@ -143,12 +185,12 @@ class LogRecord:
                                                        "is_undo": False})
         elif change_offset_match:
             if change_offset_match.group("undo"):
-                event_dictionary["event_type"] = EventType.UndoChangeAttributeProfilee.value
+                event_dictionary["event_type"] = EventType.UndoChangeAttributeProfile.value
                 event_dictionary["extra_info"] = []
                 event_dictionary["extra_info"].append(
                     {"offset": float(change_offset_match.group("offset")), "is_undo": True})
             else:
-                event_dictionary["event_type"] = EventType.ChangeAttributeProfilee.value
+                event_dictionary["event_type"] = EventType.ChangeAttributeProfile.value
                 event_dictionary["extra_info"] = []
                 event_dictionary["extra_info"].append(
                     {"offset": float(change_offset_match.group("offset")), "is_undo": False})

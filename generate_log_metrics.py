@@ -26,7 +26,7 @@ def read_log_per_profile(path_to_log: str):
         log_record = []
         for line in all_lines:
             first_two_columns = re.findall(r"\[(.*?)\]", line.strip('\n'))
-            message = re.search(r"(?:^|])(?!\.)([\w\s]+)", line.strip('\n')).group(1).lstrip()
+            message = re.search(r"(?:^|])([\w\s.()]+)", line.strip('\n')).group(1).lstrip()
             if len(first_two_columns) != 2:
                 logging.error(
                     f"The format of log file {0} is supposed to have time and name column within square bracket..." % os.path.basename(
@@ -45,6 +45,7 @@ def indexer(directory, json_file):
     logging.info("Start searching for profiles...")
     json_structure = {"data": []}
     json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
+    number_of_files = 0
     for root, _, files in os.walk(directory, topdown=False):
         log_metadata = {}
         root_elements = Path(root).parts
@@ -65,6 +66,10 @@ def indexer(directory, json_file):
                 if len(log_metadata["data"]) == 0:
                     logging.error(f"Empty log file is found at {directory}...")
                 json_writer.write_objects(log_metadata["data"])
+        if number_of_files % 50 == 0:
+            logging.info(f"Create indices for {number_of_files} log files...")
+        number_of_files += 1
+
     logging.info(f"Finish generating the indices for the given directory {directory}...")
     json_writer.close()
 
@@ -100,10 +105,12 @@ def generate_session_information(log_records, data):
                                s["start_session_time"] <= record.time < s["end_session_time"]]
             if len(session_records) == 1:
                 session_info.append(LogRecord.to_session(session_records[0].user_name, False, session_records[0].time,
-                                                         session_records[0].time, session_records[0].time, session_records[0].time))
+                                                         session_records[0].time, session_records[0].time,
+                                                         session_records[0].time))
             else:
                 session_info.append(LogRecord.to_session(session_records[0].user_name, True, session_records[0].time,
-                                                         session_records[-1].time, session_records[1].time, session_records[-1].time))
+                                                         session_records[-1].time, session_records[1].time,
+                                                         session_records[-1].time))
 
             for session_record in session_records:
                 session_info[session_count]["events"].append(
@@ -112,10 +119,12 @@ def generate_session_information(log_records, data):
             session_records = [record for record in log_records if s["start_session_time"] <= record.time]
             if len(session_records) == 1:
                 session_info.append(LogRecord.to_session(session_records[0].user_name, False, session_records[0].time,
-                                                         session_records[0].time, session_records[0].time, session_records[0].time))
+                                                         session_records[0].time, session_records[0].time,
+                                                         session_records[0].time))
             else:
                 session_info.append(LogRecord.to_session(session_records[0].user_name, True, session_records[0].time,
-                                                         session_records[-1].time, session_records[1].time, session_records[-1].time))
+                                                         session_records[-1].time, session_records[1].time,
+                                                         session_records[-1].time))
             for session_record in session_records:
                 session_info[session_count]["events"].append(
                     LogRecord.to_single_event(session_record.time, session_record.message))
@@ -175,16 +184,19 @@ def calculate_duration_time(log_records):
             # if can't find the close action time after 20mins of open action time, this start time
             # doesn't have end time
             after_start_time = time + timedelta(minutes=20)
-            if len(end_time) !=0:
+            if len(end_time) != 0:
                 time_between = [e for e in end_time if time < e < after_start_time]
                 if len(time_between) == 0 and time_count < len(start_time) - 1:
-                    session_start_end.append({"start_session_time": time, "end_session_time": start_time[time_count + 1],
-                                              "has_close_action": False})
+                    session_start_end.append(
+                        {"start_session_time": time, "end_session_time": start_time[time_count + 1],
+                         "has_close_action": False})
                 elif len(time_between) == 0 and len(end_time) < len(start_time):
-                    session_start_end.append({"start_session_time": time, "end_session_time": 0, "has_close_action": False})
+                    session_start_end.append(
+                        {"start_session_time": time, "end_session_time": 0, "has_close_action": False})
                 else:
                     session_start_end.append(
-                        {"start_session_time": time, "end_session_time": sorted(time_between)[0], "has_close_action": True})
+                        {"start_session_time": time, "end_session_time": sorted(time_between)[0],
+                         "has_close_action": True})
             else:
                 session_start_end.append(
                     {"start_session_time": time, "end_session_time": 0, "has_close_action": False})
@@ -216,8 +228,9 @@ def generate_report(path_to_metadata, csv_file_object, csv_file_profile, project
         project_level["percentage_short_objects"] = 100 - project_level["percentage_long_objects"]
         project_level["total_session_durations"] = sum(metrics["total_session_duration(second)"])
         project_level["total_edit_duration"] = len(metrics["total_edit_duration(second)"])
-        object_profile_based_metrics = metrics[metrics['object_type'] == 'Lineside Furniture'].groupby('profile_identifier',
-                                                                                           as_index=False).sum()
+        object_profile_based_metrics = metrics[metrics['object_type'] == 'Lineside Furniture'].groupby(
+            'profile_identifier',
+            as_index=False).sum()
         object_based_metrics = metrics.groupby('object_type', as_index=False).sum()
 
         object_based_metrics.to_csv(csv_file_object, index=False, sep=',', encoding='utf-8')
@@ -228,8 +241,8 @@ def generate_report(path_to_metadata, csv_file_object, csv_file_profile, project
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-    # indexer()
-    parse_log()
+    indexer()
+    # parse_log()
     # generate_report()
     # calculate_duration_time(r"R:\02 Projects\2019\9219-0021-000_Western Region\B_Sites\TOR_214_222\04_Structure_Gauging\01_Processing\02_From_FALB\2021-05-11\TOR_214_222\Sc0\TOR\1100\S&T\S&T Equipment 219 Miles 63 Chains\21963QBM_log.txt")
     # generate_metrics_per_profile()
