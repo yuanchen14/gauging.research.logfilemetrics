@@ -8,7 +8,7 @@ import datetime as dt
 from datetime import timedelta
 import numpy as np
 import pandas as pd
-
+from glob import glob
 from fugro.rail.chainage.records.writers import JsonModelFileWritingManager
 
 from models.log_metadata import LogMetaData
@@ -46,29 +46,66 @@ def indexer(directory, json_file):
     json_structure = {"data": []}
     json_writer = JsonModelFileWritingManager(json_file, json_structure, ['data'])
     number_of_files = 0
-    for root, _, files in os.walk(directory, topdown=False):
-        log_metadata = {}
-        root_elements = Path(root).parts
-        if len(files) != 0:
-            object_name = root_elements[-1]  # object name
-            object_type = root_elements[-2]  # object type
-            track_id = root_elements[-3]  # track id
-            elr = root_elements[-4]  # elr
-            sc0_matchings = [file for file in files if '.sc0' in file.lower()]
-            log_matchings = [file for file in files if '_log.txt' in file.lower()]
-            if len(sc0_matchings) == len(log_matchings) != 0:
-                log_metadata["data"] = []
-                for log_match, sc0_match in zip(log_matchings, sc0_matchings):
-                    full_log_path = os.path.join(root, log_match)
-                    profile_identifier = Path(os.path.join(root, sc0_match)).stem
-                    metadata = LogMetaData(full_log_path, object_name, object_type, elr, track_id, profile_identifier)
-                    log_metadata["data"].append(metadata.to_record())
-                if len(log_metadata["data"]) == 0:
-                    logging.error(f"Empty log file is found at {directory}...")
-                json_writer.write_objects(log_metadata["data"])
-        if number_of_files % 50 == 0:
-            logging.info(f"Create indices for {number_of_files} log files...")
-        number_of_files += 1
+
+    dir_elements = Path(directory).parts
+    if "04_Structure_Gauging" in dir_elements:
+        for root, dirs, files in os.walk(directory, topdown=False):
+            log_metadata = {}
+            root_elements = Path(root).parts
+            if len(files) != 0:
+                sc0_matchings = [file for file in files if '.sc0' in file.lower()]
+                if len(sc0_matchings) == 0:
+                    continue
+                object_name = root_elements[-1]  # object name
+                object_type = root_elements[-2]  # object type
+                track_id = root_elements[-3]  # track id
+                elr = root_elements[-4]  # elr
+                log_matchings = [file for file in files if '_log.txt' in file.lower()]
+                if len(sc0_matchings) == len(log_matchings) != 0:
+                    log_metadata["data"] = []
+                    number_of_files += len(sc0_matchings)
+                    if number_of_files % 10 == 0:
+                        logging.info(f"Create indices for {number_of_files} log files...")
+                    for log_match, sc0_match in zip(log_matchings, sc0_matchings):
+                        full_log_path = os.path.join(root, log_match)
+                        profile_identifier = Path(os.path.join(root, sc0_match)).stem
+                        metadata = LogMetaData(full_log_path, object_name, object_type, elr, track_id,
+                                               profile_identifier)
+                        log_metadata["data"].append(metadata.to_record())
+
+                    if len(log_metadata["data"]) == 0:
+                        logging.error(f"Empty log file is found at {directory}...")
+                    json_writer.write_objects(log_metadata["data"])
+    else:
+        list_path = [os.path.join(directory, p, "04_Structure_Gauging", "01_Processing") for p in os.listdir(directory)]
+        for path in list_path:
+            for root, dir, files in os.walk(path, topdown=False):
+                log_metadata = {}
+                root_elements = Path(root).parts
+                if len(files) != 0:
+                    sc0_matchings = [file for file in files if '.sc0' in file.lower()]
+                    if len(sc0_matchings) == 0:
+                        continue
+                    object_name = root_elements[-1]  # object name
+                    object_type = root_elements[-2]  # object type
+                    track_id = root_elements[-3]  # track id
+                    elr = root_elements[-4]  # elr
+                    log_matchings = [file for file in files if '_log.txt' in file.lower()]
+                    if len(sc0_matchings) == len(log_matchings) != 0:
+                        log_metadata["data"] = []
+                        number_of_files += len(sc0_matchings)
+                        if number_of_files % 10 == 0:
+                            logging.info(f"Create indices for {number_of_files} log files...")
+                        for log_match, sc0_match in zip(log_matchings, sc0_matchings):
+                            full_log_path = os.path.join(root, log_match)
+                            profile_identifier = Path(os.path.join(root, sc0_match)).stem
+                            metadata = LogMetaData(full_log_path, object_name, object_type, elr, track_id,
+                                                   profile_identifier)
+                            log_metadata["data"].append(metadata.to_record())
+
+                        if len(log_metadata["data"]) == 0:
+                            logging.error(f"Empty log file is found at {directory}...")
+                        json_writer.write_objects(log_metadata["data"])
 
     logging.info(f"Finish generating the indices for the given directory {directory}...")
     json_writer.close()
